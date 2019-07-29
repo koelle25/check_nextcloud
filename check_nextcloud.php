@@ -75,7 +75,13 @@ $db_size = $result['ocs']['data']['server']['database']['size'];
 
 // print output for icinga
 if ($statuscode == 200) {
-  printf("OK - Nextcloud %s (%s available), ", $nc_version, convert_filesize($freespace));
+  $status = 'OK';
+  $returncode = 0;
+  if ($app_updates_available > 0) {
+    $status = 'WARNING';
+    $returncode = 1;
+  }
+  printf("%s - Nextcloud %s (%s available), ", $status, $nc_version, convert_filesize($freespace));
   if ($app_updates_available > 0) {
     printf("%d app updates available (%s), ", $app_updates_available, implode(", ", $app_updates));
   }
@@ -92,7 +98,7 @@ if ($statuscode == 200) {
   echo "shares=${shares} ";
   echo "db_size=${db_size}B ";
   echo "\n";
-  exit(0);
+  exit($returncode);
 } else if ($statuscode >= 400 && $statuscode < 600) {
   echo "CRITICAL: $status\n";
   exit(2);
