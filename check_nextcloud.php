@@ -69,7 +69,7 @@ $shares_groups = $result['ocs']['data']['nextcloud']['shares']['num_shares_group
 $shares_link = $result['ocs']['data']['nextcloud']['shares']['num_shares_link'];
 $shares_fed = $result['ocs']['data']['nextcloud']['shares']['num_fed_shares_sent'];
 $webserver = $result['ocs']['data']['server']['webserver'];
-$php = $result['ocs']['data']['server']['php']['version'];
+$php_version = $result['ocs']['data']['server']['php']['version'];
 $db = $result['ocs']['data']['server']['database']['type'] . " " . $result['ocs']['data']['server']['database']['version'];
 $db_size = $result['ocs']['data']['server']['database']['size'];
 
@@ -79,8 +79,8 @@ if ($statuscode == 200) {
   if ($app_updates_available > 0) {
     printf("%d app updates available (%s), ", $app_updates_available, implode(", ", $app_updates));
   }
-  printf("%d users (%d < 5min, %d < 1h, %d < 24h), %d files, ", $users, $users_active_5min, $users_$
-  printf("%d shares (%d user, %d group, %d link, %d federated), ", $shares, $shares_user, $shares_g$
+  printf("%d users (%d < 5min, %d < 1h, %d < 24h), %d files, ", $users, $users_active_5min, $users_active_1h, $users_active_24h, $files);
+  printf("%d shares (%d user, %d group, %d link, %d federated), ", $shares, $shares_user, $shares_groups, $shares_link, $shares_fed);
   printf("%s, PHP %s, %s (%s)", $webserver, $php_version, $db, convert_filesize($db_size));
   echo "| free_space=${freespace}B ";
   echo "app_updates=${app_updates_available} ";
