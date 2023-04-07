@@ -25,20 +25,26 @@ object CheckCommand "nextcloud" {
       "value" = "$nc_host$"
     }
     "-U" = {
-      "required" = true
+      "required" = false
       "description" = "serverinfo API url, you can find it on https://cloud.example.com/settings/admi$
       "value" = "$nc_api_url$"
     }
+    "-T" = {
+      "required" = false
+      "description" = "server info token - define it here https://cloud.example.com/index.php/settings/admin/serverinfo"
+      "value" = "$nc_api_user$"
+    }
     "-u" = {
-      "required" = true
-      "description" = "API user (has to be an admin)"
+      "required" = false
+      "description" = "API user (has to be an admin) - obsolete when -T provided"
       "value" = "$nc_api_user$"
     }
     "-p" = {
-      "required" = true
-      "description" = "API-user's password"
+      "required" = false
+      "description" = "API-user's password - obsolete when -T provided"
       "value" = "$nc_api_password$"
     }
+
   }
 
   vars.nc_api_url = "/ocs/v2.php/apps/serverinfo/api/v1/info"
@@ -47,6 +53,6 @@ object CheckCommand "nextcloud" {
 
 ## Changelog
 * 2019-05-08: initial version (koelle25)
-
+* 2023-04-07: add token athentification (beccon4)
 ## Authors
 * [Kevin Köllmann](https://github.com/koelle25)

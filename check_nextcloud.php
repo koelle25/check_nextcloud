@@ -1,3 +1,4 @@
+
 #!/usr/bin/php
 <?php
 
@@ -22,36 +23,60 @@ function convert_filesize($bytes, $decimals = 2) {
   return sprintf("%.{$decimals}f %s", $bytes / pow(1024, $factor), @$size[$factor]);
 }
 
+function show_helptext() {
+  print "check_nextcloud.php - Monitoring plugin to check the status of nextcloud serverinfo app.\n
+You need to specify the following parameters:
+  -H:  hostname of the nextcloud instance, e.g. cloud.example.com
+  -U:  uri of the nextcloud serverinfo api, you'll find it at https://cloud.example.com/settings/admin/serverinfo
+  -T:  authenticate using serverinfo token (either -T or -u and -p)
+  -u:  username to authenticate against the API endpoint
+  -p:  password to authenticate against the API endpoint
+  -s:  (optional) should the check be done over HTTPS? (default: true)  \n\n";
+}
+
+
 
 // get commands passed as arguments
-$options = getopt("H:U:u:p:s::");
+$options = getopt("H:U:u:p:T:s::");
 if (!is_array($options) ) {
   print "There was a problem reading the passed option.\n\n";
   exit(1);
 }
 
-if (count($options) < "4") {
-  print "check_nextcloud.php - Monitoring plugin to check the status of nextcloud serverinfo app.\n
-You need to specify the following parameters:
-  -H:  hostname of the nextcloud instance, e.g. cloud.example.com
-  -U:  uri of the nextcloud serverinfo api, you'll find it at https://cloud.example.com/settings/admin/serverinfo
-  -u:  username to authenticate against the API endpoint
-  -p:  password to authenticate against the API endpoint
-  -s:  (optional) should the check be done over HTTPS? (default: true)  \n\n";
+if( !isset($options['H']) ) {
+  show_helptext();
   exit(2);
 }
 
 $nchost = trim($options['H']);
-$ncuri = trim($options['U']);
+$ncuri = isset($options['U']) ? trim($options['U']) : "/ocs/v2.php/apps/serverinfo/api/v1/info";
 $ncssl = (isset($options['s']) && is_bool($options['s'])) ? $options['s'] : true;
-$ncuser = trim($options['u']);
-$ncpass = trim($options['p']);
-$ncurl = ($ncssl ? "https://" : "http://") . $ncuser . ":" . $ncpass . "@" . $nchost . $ncuri;
+$ncsit =  isset($options['T']) ? trim($options['T']) : "";
+$ncuser = isset($options['u']) ? trim($options['u']) : "";
+$ncpass = isset($options['p']) ? trim($options['p']) : "";
+
+$context=null;
+if($ncsit) {
+  $opts = array (
+    'http' => array (
+    'method' => 'GET',
+    'header' => "NC-Token:$ncsit",
+    )
+  );
+  $context = stream_context_create($opts);
+}
+$ncurl = ($ncssl ? "https://" : "http://") . (isset($options['T']) ? "" : $ncuser . ":" . $ncpass . "@") . $nchost . $ncuri;
 
 // get UUID from scan.nextcloud.com service
 $url = "${ncurl}?format=json";
-$result = json_decode(file_get_contents($url, false), true);
+$res_str = file_get_contents($url, false, $context);
+if(empty($res_str)) {
+  print "Cannot access Nextcloud server info\n\n";
+  exit(2);
+}
+$result = json_decode($res_str, true);
 
+// collect performance data results for output
 $statuscode = $result['ocs']['meta']['statuscode'];
 $status = $result['ocs']['meta']['status'] . ": " . $result['ocs']['meta']['message'];
 $nc_version = $result['ocs']['data']['nextcloud']['system']['version'];
