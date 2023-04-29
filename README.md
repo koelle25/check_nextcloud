@@ -8,7 +8,8 @@ This is a monitoring plugin for [icinga](https://www.icinga.com) to check the st
 ## Usage
 Try the plugin at the command line like this:
 ```
-/usr/bin/php ./check_nextcloud.php -H cloud.example.com -u apiuser -p apipassword
+/usr/bin/php ./check_nextcloud.php -H cloud.example.com -T access-token
+
 ```
 
 You can define the icinga2 check command as follows:
@@ -56,3 +57,4 @@ object CheckCommand "nextcloud" {
 * 2023-04-07: add token athentification (beccon4)
 ## Authors
 * [Kevin Köllmann](https://github.com/koelle25)
+* [Conrad Beckert](https://github.com/beccon4)
