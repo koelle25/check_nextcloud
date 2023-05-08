@@ -188,6 +188,8 @@ if($ncpd) {
             exit(1);
         }
     }
+    echo "OK|${ncpd} ${ncwarn}: ${pd_value_str}";
+    exit(0);
 }
 
 // print output for icinga
