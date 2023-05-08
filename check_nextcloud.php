@@ -6,7 +6,7 @@
  * Monitoring plugin to check the status of nextcloud serverinfo app
  *
  * Copyright (c) 2019 Kevin Köllmann <mail@kevinkoellmann.de>
- * contribution: Conrad Beckert <kontakt@miradata.de>
+ * contribution and further development: Conrad Beckert <kontakt@miradata.de>
  *
  * Usage: /usr/bin/php ./check_nextcloud.php -H cloud.example.com -u /ocs/v2.php/apps/serverinfo/api/v1/info
  *
@@ -169,15 +169,22 @@ if($ncpd) {
         echo "UNKNOWN|Wrong parameter ${$ncpd}";
         exit(3);
     }
+
+    # --- quantities in kB MB GB etc. ---
+    $pd_value_str = $pd[$ncpd];
+    if($ncpd == "freespace" or $ncpd == "mem_free" or $ncpd == "mem_total"or $ncpd == "swap_free" or $ncpd == "swap_total") {
+        $pd_value_str = convert_filesize($pd[$ncpd]);
+    }
+
     if( isset($nccrit) ) {
         if( check_range($nccrit,$pd[$ncpd]) ) {
-            echo "ERROR|${ncpd} ${nccrit}";
+            echo "ERROR|${ncpd} ${nccrit}: ${pd_value_str}";
             exit(2);
         }
     }
     if( isset($ncwarn) ) {
         if( check_range($ncwarn,$pd[$ncpd]) ) {
-            echo "WARNING|${ncpd} ${ncwarn}";
+            echo "WARNING|${ncpd} ${ncwarn}: ${pd_value_str}";
             exit(1);
         }
     }
