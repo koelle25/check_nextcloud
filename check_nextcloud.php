@@ -16,33 +16,57 @@
  *
  ***/
 
+// 1k => 1024  
+function scan_bytesize($bytesize_str) {
+    $exponent = array('B'=>0 ,'kB'=>1,'MB'=> 2 ,'GB'=>3,'TB'=>4,'PB'=>5,'EB'=>6,'ZB'=>7,'YB'=>8,"KB"=>1);
+    while(preg_match("/([0-9\.]+)([kKMGT]*B)/",$bytesize_str,$matches)) {
+        $bytesize_value = $matches[1] * pow(1024,$exponent[$matches[2]]);
+        $bytesize_str = preg_replace("/[0-9\.]+([kKMGT]*B)/",$bytesize_value,$bytesize_str,1);
+    }
+    return $bytesize_str;
+}
 
-function convert_filesize($bytes, $decimals = 2) {
+// 1024 => 1kB
+function format_bytesize($bytes, $decimals = 2) {
   $size = array('B','kB','MB','GB','TB','PB','EB','ZB','YB');
   $factor = floor((strlen($bytes) - 1) / 3);
   return sprintf("%.{$decimals}f %s", $bytes / pow(1024, $factor), @$size[$factor]);
 }
 
-function check_range($pattern,$value) {
-    if(preg_match('/@([-0-9\.]+)\:([-0-9\.]+)/',$pattern,$matches)) {
+function out_of_range($pattern,$value) {
+    if(preg_match('/@([-0-9\.]+)\:([-0-9\.]+)/',scan_bytesize($pattern),$matches)) {
         return ( $value >= $matches[1] and $value <= $matches[2] )? 1 : 0;
     }
-    elseif(preg_match('/([-0-9\.]+)\:([-0-9\.]+)/',$pattern,$matches)) {
+    elseif(preg_match('/([-0-9\.]+)\:([-0-9\.]+)/',scan_bytesize($pattern),$matches)) {
         return ( $value < $matches[1] or $value > $matches[2] )? 1 : 0;
     }
-    elseif(preg_match('/\~\:([-0-9\.]+)/',$pattern,$matches)) {
+    elseif(preg_match('/\~\:([-0-9\.]+)/',scan_bytesize($pattern),$matches)) {
         return ( $value > $matches[1])? 1 : 0;
     }
-    elseif(preg_match('/([-0-9\.]+)\:$/',$pattern,$matches)) {
+    elseif(preg_match('/([-0-9\.]+)\:$/',scan_bytesize($pattern),$matches)) {
         return ( $value < $matches[1] ) ? 1 : 0;
     }
-    elseif(preg_match('/([-0-9\.]+)/',$pattern,$matches)) {
+    elseif(preg_match('/([-0-9\.]+)/',scan_bytesize($pattern),$matches)) {
         return ($value < 0 or $value > $matches[1])?1:0;
     }
     else {
         return 0;
     }
 }       
+
+function performance_status($parameter_value,$ncwarn,$nccrit) {
+    if( isset($nccrit) && $nccrit > "" ) {
+        if( out_of_range($nccrit,$parameter_value) ) {
+            return(2);
+        }
+    }
+    if( isset($ncwarn) && $ncwarn > "" ) {
+        if( out_of_range($ncwarn,$parameter_value) ) {
+            return(1);
+        }
+    }
+    return(0);
+}
 
 function show_helptext() {
   print "check_nextcloud.php - Monitoring plugin to check the status of nextcloud serverinfo app.\n
@@ -52,26 +76,14 @@ You need to specify the following parameters:
   -T token: authenticate using serverinfo token (either -T or -u and -p)
   -P:  Performance Data Parameter:
 	freespace
-	load1
-	load5
-	load15
-	mem_free
-	mem_total
-	swap_free
-	swap_total
-	app_updates_available
-	users
-	users_active_5min
-	users_active_1h
-	users_active_24h
-	files
-	shares
-	shares_user
-	shares_groups
-	shares_link
-	shares_fed
-	php_version
-	db_size
+    memory
+    swap
+    load
+    files
+    users
+    shares 
+    patchlevel
+
   -c range: Critical Value (returns 2 CRITICAL if -P out of range)
   -w range:  Warning Value  (returns 1 WARNING if -P out of range)
   -u:  username to authenticate against the API endpoint
@@ -99,7 +111,7 @@ if (!is_array($options) ) {
 
 if( !isset($options['H']) ) {
   show_helptext();
-  exit(2);
+  exit(3);
 }
 
 $nchost = trim($options['H']);
@@ -137,7 +149,7 @@ $result = json_decode($res_str, true);
 $statuscode = $result['ocs']['meta']['statuscode'];
 $status = $result['ocs']['meta']['status'] . ": " . $result['ocs']['meta']['message'];
 $nc_version = $result['ocs']['data']['nextcloud']['system']['version'];
-# --- Performance data ---
+// --- Performance data ---
 $pd['freespace'] = $result['ocs']['data']['nextcloud']['system']['freespace'];
 $pd['load1'] = $result['ocs']['data']['nextcloud']['system']['cpuload']['0'];
 $pd['load5'] = $result['ocs']['data']['nextcloud']['system']['cpuload']['1'];
@@ -147,7 +159,7 @@ $pd['mem_total'] = $result['ocs']['data']['nextcloud']['system']['mem_total'] * 
 $pd['swap_free'] = $result['ocs']['data']['nextcloud']['system']['swap_free'] * 1024;
 $pd['swap_total'] = $result['ocs']['data']['nextcloud']['system']['swap_total'] * 1024;
 $pd['app_updates_available'] = $result['ocs']['data']['nextcloud']['system']['apps']['num_updates_available'];
-$app_updates = array_keys($result['ocs']['data']['nextcloud']['system']['apps']['app_updates']);
+$pd['app_updates'] = array_keys($result['ocs']['data']['nextcloud']['system']['apps']['app_updates']);
 $pd['users'] = $result['ocs']['data']['nextcloud']['storage']['num_users'];
 $pd['users_active_5min'] = $result['ocs']['data']['activeUsers']['last5minutes'];
 $pd['users_active_1h'] = $result['ocs']['data']['activeUsers']['last1hour'];
@@ -157,77 +169,89 @@ $pd['shares'] = $result['ocs']['data']['nextcloud']['shares']['num_shares'];
 $pd['shares_user'] = $result['ocs']['data']['nextcloud']['shares']['num_shares_user'];
 $pd['shares_groups'] = $result['ocs']['data']['nextcloud']['shares']['num_shares_groups'];
 $pd['shares_link'] = $result['ocs']['data']['nextcloud']['shares']['num_shares_link'];
-$pd['shares_fed'] = $result['ocs']['data']['nextcloud']['shares']['num_fed_shares_sent'];
-$webserver = $result['ocs']['data']['server']['webserver'];
+$pd['shares_link_no_password'] = $result['ocs']['data']['nextcloud']['shares']['num_shares_link_no_password'];
+$pd['shares_fed_sent'] = $result['ocs']['data']['nextcloud']['shares']['num_fed_shares_sent'];
+$pd['shares_fed_received'] = $result['ocs']['data']['nextcloud']['shares']['num_fed_shares_received'];
+$pd['webserver'] = $result['ocs']['data']['server']['webserver'];
 $pd['php_version']= $result['ocs']['data']['server']['php']['version'];
-$db = $result['ocs']['data']['server']['database']['type'] . " " . $result['ocs']['data']['server']['database']['version'];
+$pd['db'] = $result['ocs']['data']['server']['database']['type'] . " " . $result['ocs']['data']['server']['database']['version'];
 $pd['db_size'] = $result['ocs']['data']['server']['database']['size'];
 
-// check Performance Data Parameter 
-if($ncpd) {
-    if( !isset($pd[$ncpd]) ) {
-        echo "UNKNOWN|Wrong parameter ${$ncpd}";
-        exit(3);
-    }
 
-    # --- quantities in kB MB GB etc. ---
-    $pd_value_str = $pd[$ncpd];
-    if($ncpd == "freespace" or $ncpd == "mem_free" or $ncpd == "mem_total"or $ncpd == "swap_free" or $ncpd == "swap_total") {
-        $pd_value_str = convert_filesize($pd[$ncpd]);
-    }
-
-    if( isset($nccrit) ) {
-        if( check_range($nccrit,$pd[$ncpd]) ) {
-            echo "ERROR|${ncpd} ${nccrit}: ${pd_value_str}";
-            exit(2);
-        }
-    }
-    if( isset($ncwarn) ) {
-        if( check_range($ncwarn,$pd[$ncpd]) ) {
-            echo "WARNING|${ncpd} ${ncwarn}: ${pd_value_str}";
-            exit(1);
-        }
-    }
-    echo "OK|${ncpd} ${ncwarn}: ${pd_value_str}";
-    exit(0);
-}
-
+$returncode=0;
 // print output for icinga
 if ($statuscode == 200) {
-  $status = 'OK';
-  $returncode = 0;
-  if ($pd['app_updates_available'] > 0) {
-    $status = 'WARNING';
-    $returncode = 1;
-  }
-  printf("%s - Nextcloud %s (%s available), ", $status, $nc_version, convert_filesize($pd['freespace']));
-  if ($pd['app_updates_available'] > 0) {
-    printf("%d app updates available (%s), ", $pd['app_updates_available'], implode(", ", $app_updates));
-  }
-  printf("%d users (%d < 5min, %d < 1h, %d < 24h), %d files, ", $pd['users'], $pd['users_active_5min'], $pd['users_active_1h'], $pd['users_active_24h'], $pd['files']);
-  printf("%d shares (%d user, %d group, %d link, %d federated), ", $pd['shares'], $pd['shares_user'], $pd['shares_groups'], $pd['shares_link'], $pd['shares_fed']);
-  printf("%s, PHP %s, %s (%s)", $webserver, $pd['php_version'], $db, convert_filesize($pd['db_size']));
-  echo "| free_space=${pd['freespace']}B ";
-  echo "load1=${pd['load1']} ";
-  echo "load5=${pd['load5']} ";
-  echo "load15=${pd['load15']} ";
-  echo "mem_free=${pd['mem_free']}B;;;0;${pd['mem_total']} ";
-  echo "swap_free=${pd['swap_free']}B;;;0;${pd['swap_total']} ";
-  echo "app_updates=${pd['app_updates_available']} ";
-  echo "users=${pd['users']} ";
-  echo "users5m=${pd['users_active_5min']} ";
-  echo "users1h=${pd['users_active_1h']} ";
-  echo "users24h=${pd['users_active_24h']} ";
-  echo "files=${pd['files']} ";
-  echo "shares=${pd['shares']} ";
-  echo "db_size=${pd['db_size']}B ";
-  echo "\n";
-  exit($returncode);
-} else if ($statuscode >= 400 && $statuscode < 600) {
-  echo "CRITICAL: $status\n";
-  exit(2);
-} else {
-  echo "WARNING: $status\n";
+    $perf_data="";
+    $status_message = sprintf("Nextcloud Version: %s ",$nc_version);
+    // check Performance Data Parameter 
+    // returns: 'label'=value[UOM];[warn];[crit];[min];[max]
+    if($ncpd == "freespace") {
+        $status_message .= sprintf("(%s disk available)", format_bytesize($pd['freespace']));
+        $perf_data .= sprintf(" free_space=%sB;%sB;%sB;; ",$pd['freespace'],$ncwarn,$nccrit);
+        $returncode = performance_status($pd['freespace'],$ncwarn,$nccrit);
+    }
+    if($ncpd == "memory") {
+        $status_message .= sprintf("(%s memory available of %s)", format_bytesize($pd['mem_free']), format_bytesize($pd['mem_total']));
+        $perf_data .= sprintf(" memory_free=%sB;%sB;%sB;; ",$pd['mem_free'],$ncwarn,$nccrit);
+        $perf_data .= sprintf(" memory_total=%sB;;;; ",$pd['mem_total']);
+        $returncode = performance_status($pd['mem_free'],$ncwarn,$nccrit);
+    }
+    if($ncpd == "swap") {
+        $status_message .= sprintf("(%s swap available of %s)", format_bytesize($pd['swap_free']), format_bytesize($pd['swap_total']));
+        $perf_data .= sprintf(" swap=%sB;%sB;%sB;; ",$pd['swap_free'],$ncwarn,$nccrit);
+        $perf_data .= sprintf(" swap=%sB;;;; ",$pd['swap_total']);
+        $returncode = performance_status($pd['swap_free'],$ncwarn,$nccrit);
+    }
+    if($ncpd == "database") {
+        $status_message .= sprintf("(database %s size %s)", $pd['db'], format_bytesize($pd['db_size']));
+        $perf_data .= sprintf(" database=%sB;%sB;%sB;; ",$pd['db_size'],$ncwarn,$nccrit);
+        $returncode = performance_status($pd['db_size'],$ncwarn,$nccrit);
+    }
+    if($ncpd == "patchlevel") {
+        $status_message .= sprintf("(webserver %s, PHP %s, database %s size %s)",
+                                   $pd['webserver'],$pd['php_version'],$pd['db'], format_bytesize($pd['db_size']));
+        $status_message .= sprintf(" %d app updates available (%s), ", $pd['app_updates_available'], implode(", ", $pd['app_updates']));
+        $returncode = $pd['app_updates_available'] > 0 ? 1 : 0; 
+    }
+    if($ncpd == "load") {
+        $status_message .= sprintf("(cpu load 1min %f 5min %f 15min %f)", $pd['load1'],$pd['load5'],$pd['load15']);
+        $perf_data .= sprintf(" cpuload1=%f;%sB;%sB;; ",$pd['load1'],$ncwarn,$nccrit);
+        $perf_data .= sprintf(" cpuload5=%f;;;; ",$pd['load5']);
+        $perf_data .= sprintf(" cpuload15=%f;;;; ",$pd['load15']);
+        $returncode = performance_status($pd['load1'],$ncwarn,$nccrit);
+    }
+    if($ncpd == "users") {
+        $status_message .= sprintf("(user count: %d 5min: %d 1h: %d 24h %d)", 
+                                    $pd['users'],$pd['users_active_5min'],$pd['users_active_1h'],$pd['users_active_24h']);
+        $perf_data .= sprintf(" users=%d;%sB;%sB;; ",$pd['users'],$ncwarn,$nccrit);
+        $perf_data .= sprintf(" users5min=%d;;;; ",$pd['users_active_5min']);
+        $perf_data .= sprintf(" users1h=%d;;;; ",$pd['users_active_1h']);
+        $perf_data .= sprintf(" users24h=%d;;;; ",$pd['users_active_24h']);
+        $returncode = performance_status($pd['users_active_5min'],$ncwarn,$nccrit);
+    }
+    if($ncpd == "shares") {
+        $status_message .= sprintf("(shares: %d user: %d group: %d linked: %d without password: %d federated send: %d received: %d) ", 
+                                    $pd['shares'],$pd['shares_user'],$pd['shares_groups'],
+                                    $pd['shares_link'],$pd['shares_link_no_password'],
+                                    $pd['shares_fed_sent'],$pd['shares_fed_received']);
+        $perf_data .= sprintf(" shares=%d;%s;%s;; ",$pd['shares'],$ncwarn,$nccrit);
+        $perf_data .= sprintf(" shares_user=%d;;;; ",$pd['shares_user']);
+        $perf_data .= sprintf(" shares_groups=%d;;;; ",$pd['shares_groups']);
+        $perf_data .= sprintf(" shares_link=%d;;;; ",$pd['shares_link']);
+        $perf_data .= sprintf(" shares_link_no_password=%d;;;; ",$pd['shares_link_no_password']);
+        $perf_data .= sprintf(" shares_federated_sent=%d;;;; ",$pd['shares_fed_sent']);
+        $perf_data .= sprintf(" shares_federated_received=%d;;;; ",$pd['shares_fed_received']);
+    }
+    printf("%s : %s\n|%s", ($returncode==0?'OK':($returncode==1?'WARNING':'CRITICAL')),$status_message,$perf_data);
+    exit($returncode);
+} 
+else if ($statuscode >= 400 && $statuscode < 600) {
+    printf("CRITICAL: %s\n",$status);
+    exit(2);
+} 
+else {
+  printf("WARNING: %s\n", $status);
   exit(1);
 }
+
 ?>
