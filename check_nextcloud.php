@@ -242,7 +242,7 @@ if ($statuscode == 200) {
         $perf_data .= sprintf(" shares_federated_sent=%d;;;; ",$pd['shares_fed_sent']);
         $perf_data .= sprintf(" shares_federated_received=%d;;;; ",$pd['shares_fed_received']);
     }
-    printf("%s : %s\n|%s", ($returncode==0?'OK':($returncode==1?'WARNING':'CRITICAL')),$status_message,$perf_data);
+    printf("%s : %s%s%s", ($returncode==0?'OK':($returncode==1?'WARNING':'CRITICAL')), $status_message, $perf_data>""?"\n|":"", $perf_data);
     exit($returncode);
 } 
 else if ($statuscode >= 400 && $statuscode < 600) {
