@@ -198,8 +198,8 @@ if ($statuscode == 200) {
     }
     if($ncpd == "swap") {
         $status_message .= sprintf("%s swap available of %s ", format_bytesize($pd['swap_free']), format_bytesize($pd['swap_total']));
-        $perf_data .= sprintf(" swap=%sB;%sB;%sB;; ",$pd['swap_free'],$ncwarn,$nccrit);
-        $perf_data .= sprintf(" swap=%sB;;;; ",$pd['swap_total']);
+        $perf_data .= sprintf(" swap_free=%sB;%sB;%sB;; ",$pd['swap_free'],$ncwarn,$nccrit);
+        $perf_data .= sprintf(" swap_total=%sB;;;; ",$pd['swap_total']);
         $returncode = performance_status($pd['swap_free'],$ncwarn,$nccrit);
     }
     if($ncpd == "database") {
@@ -215,9 +215,9 @@ if ($statuscode == 200) {
     }
     if($ncpd == "load") {
         $status_message .= sprintf("cpu load 1min %f 5min %f 15min %f ", $pd['load1'],$pd['load5'],$pd['load15']);
-        $perf_data .= sprintf(" cpuload1=%f;%sB;%sB;; ",$pd['load1'],$ncwarn,$nccrit);
-        $perf_data .= sprintf(" cpuload5=%f;;;; ",$pd['load5']);
-        $perf_data .= sprintf(" cpuload15=%f;;;; ",$pd['load15']);
+        $perf_data .= sprintf(" cpuload1min=%f;%sB;%sB;; ",$pd['load1'],$ncwarn,$nccrit);
+        $perf_data .= sprintf(" cpuload5min=%f;;;; ",$pd['load5']);
+        $perf_data .= sprintf(" cpuload15min=%f;;;; ",$pd['load15']);
         $returncode = performance_status($pd['load1'],$ncwarn,$nccrit);
     }
     if($ncpd == "users") {
