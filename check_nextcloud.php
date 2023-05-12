@@ -182,46 +182,46 @@ $returncode=0;
 // print output for icinga
 if ($statuscode == 200) {
     $perf_data="";
-    $status_message = sprintf("Nextcloud Version: %s ",$nc_version);
+    $status_message = ""; # sprintf("Nextcloud Version: %s ",$nc_version);
     // check Performance Data Parameter 
     // returns: 'label'=value[UOM];[warn];[crit];[min];[max]
     if($ncpd == "freespace") {
-        $status_message .= sprintf("(%s disk available)", format_bytesize($pd['freespace']));
+        $status_message .= sprintf("%s disk space available ", format_bytesize($pd['freespace']));
         $perf_data .= sprintf(" free_space=%sB;%sB;%sB;; ",$pd['freespace'],$ncwarn,$nccrit);
         $returncode = performance_status($pd['freespace'],$ncwarn,$nccrit);
     }
     if($ncpd == "memory") {
-        $status_message .= sprintf("(%s memory available of %s)", format_bytesize($pd['mem_free']), format_bytesize($pd['mem_total']));
+        $status_message .= sprintf("%s memory available of %s ", format_bytesize($pd['mem_free']), format_bytesize($pd['mem_total']));
         $perf_data .= sprintf(" memory_free=%sB;%sB;%sB;; ",$pd['mem_free'],$ncwarn,$nccrit);
         $perf_data .= sprintf(" memory_total=%sB;;;; ",$pd['mem_total']);
         $returncode = performance_status($pd['mem_free'],$ncwarn,$nccrit);
     }
     if($ncpd == "swap") {
-        $status_message .= sprintf("(%s swap available of %s)", format_bytesize($pd['swap_free']), format_bytesize($pd['swap_total']));
+        $status_message .= sprintf("%s swap available of %s ", format_bytesize($pd['swap_free']), format_bytesize($pd['swap_total']));
         $perf_data .= sprintf(" swap=%sB;%sB;%sB;; ",$pd['swap_free'],$ncwarn,$nccrit);
         $perf_data .= sprintf(" swap=%sB;;;; ",$pd['swap_total']);
         $returncode = performance_status($pd['swap_free'],$ncwarn,$nccrit);
     }
     if($ncpd == "database") {
-        $status_message .= sprintf("(database %s size %s)", $pd['db'], format_bytesize($pd['db_size']));
+        $status_message .= sprintf("database %s size %s ", $pd['db'], format_bytesize($pd['db_size']));
         $perf_data .= sprintf(" database=%sB;%sB;%sB;; ",$pd['db_size'],$ncwarn,$nccrit);
         $returncode = performance_status($pd['db_size'],$ncwarn,$nccrit);
     }
     if($ncpd == "patchlevel") {
-        $status_message .= sprintf("(webserver %s, PHP %s, database %s size %s)",
-                                   $pd['webserver'],$pd['php_version'],$pd['db'], format_bytesize($pd['db_size']));
-        $status_message .= sprintf(" %d app updates available (%s), ", $pd['app_updates_available'], implode(", ", $pd['app_updates']));
+        $status_message .= sprintf("Nextcloud version: %s webserver %s, PHP %s, database %s size %s ",
+                                   $nc_version, $pd['webserver'],$pd['php_version'],$pd['db'], format_bytesize($pd['db_size']));
+        $status_message .= sprintf("%d app updates available (%s) ", $pd['app_updates_available'], implode(", ", $pd['app_updates']));
         $returncode = $pd['app_updates_available'] > 0 ? 1 : 0; 
     }
     if($ncpd == "load") {
-        $status_message .= sprintf("(cpu load 1min %f 5min %f 15min %f)", $pd['load1'],$pd['load5'],$pd['load15']);
+        $status_message .= sprintf("cpu load 1min %f 5min %f 15min %f ", $pd['load1'],$pd['load5'],$pd['load15']);
         $perf_data .= sprintf(" cpuload1=%f;%sB;%sB;; ",$pd['load1'],$ncwarn,$nccrit);
         $perf_data .= sprintf(" cpuload5=%f;;;; ",$pd['load5']);
         $perf_data .= sprintf(" cpuload15=%f;;;; ",$pd['load15']);
         $returncode = performance_status($pd['load1'],$ncwarn,$nccrit);
     }
     if($ncpd == "users") {
-        $status_message .= sprintf("(user count: %d 5min: %d 1h: %d 24h %d)", 
+        $status_message .= sprintf("user count: %d 5min: %d 1h: %d 24h %d ",
                                     $pd['users'],$pd['users_active_5min'],$pd['users_active_1h'],$pd['users_active_24h']);
         $perf_data .= sprintf(" users=%d;%sB;%sB;; ",$pd['users'],$ncwarn,$nccrit);
         $perf_data .= sprintf(" users5min=%d;;;; ",$pd['users_active_5min']);
@@ -230,7 +230,7 @@ if ($statuscode == 200) {
         $returncode = performance_status($pd['users_active_5min'],$ncwarn,$nccrit);
     }
     if($ncpd == "shares") {
-        $status_message .= sprintf("(shares: %d user: %d group: %d linked: %d without password: %d federated send: %d received: %d) ", 
+        $status_message .= sprintf("shares: %d user: %d group: %d linked: %d without password: %d federated send: %d received: %d ",
                                     $pd['shares'],$pd['shares_user'],$pd['shares_groups'],
                                     $pd['shares_link'],$pd['shares_link_no_password'],
                                     $pd['shares_fed_sent'],$pd['shares_fed_received']);
