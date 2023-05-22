@@ -81,7 +81,7 @@ You need to specify the following parameters:
     swap       - free space in swap
     load       - cpu load (last 1min, 5min, 15min - 1min triggers alarm)
     files      - number of files under management
-    users      - number of users logged in (last 5min, 1h, 24h - 5min triggers alarm)
+    users      - number of users logged in (actual, last 5min, 1h, 24h - actual triggers alarm)
     shares     - number of shares published
     patchlevel - pending updates for Nextcloud and modules (yes or no)
 
@@ -228,7 +228,7 @@ if ($statuscode == 200) {
         $perf_data .= sprintf(" users5min=%d;;;; ",$pd['users_active_5min']);
         $perf_data .= sprintf(" users1h=%d;;;; ",$pd['users_active_1h']);
         $perf_data .= sprintf(" users24h=%d;;;; ",$pd['users_active_24h']);
-        $returncode = performance_status($pd['users_active_5min'],$ncwarn,$nccrit);
+        $returncode = performance_status($pd['users'],$ncwarn,$nccrit);
     }
     if($ncpd == "shares") {
         $status_message .= sprintf("shares: %d user: %d group: %d linked: %d without password: %d federated send: %d received: %d ",
