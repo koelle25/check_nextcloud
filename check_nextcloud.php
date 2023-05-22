@@ -75,14 +75,15 @@ You need to specify the following parameters:
   -U:  uri of the nextcloud serverinfo api, you'll find it at https://cloud.example.com/settings/admin/serverinfo
   -T token: authenticate using serverinfo token (either -T or -u and -p)
   -P:  Performance Data Parameter:
-	freespace
-    memory
-    swap
-    load
-    files
-    users
-    shares 
-    patchlevel
+	freespace  - space available on disk
+    memory     - memory usage (free memory triggers alarm, total memory for information purposes)
+    database   - size on disk
+    swap       - free space in swap
+    load       - cpu load (last 1min, 5min, 15min - 1min triggers alarm)
+    files      - number of files under management
+    users      - number of users logged in (last 5min, 1h, 24h - 5min triggers alarm)
+    shares     - number of shares published
+    patchlevel - pending updates for Nextcloud and modules (yes or no)
 
   -c range: Critical Value (returns 2 CRITICAL if -P out of range)
   -w range:  Warning Value  (returns 1 WARNING if -P out of range)
@@ -241,6 +242,7 @@ if ($statuscode == 200) {
         $perf_data .= sprintf(" shares_link_no_password=%d;;;; ",$pd['shares_link_no_password']);
         $perf_data .= sprintf(" shares_federated_sent=%d;;;; ",$pd['shares_fed_sent']);
         $perf_data .= sprintf(" shares_federated_received=%d;;;; ",$pd['shares_fed_received']);
+        $returncode = performance_status($pd['shares'],$ncwarn,$nccrit);
     }
     printf("%s : %s%s%s", ($returncode==0?'OK':($returncode==1?'WARNING':'CRITICAL')), $status_message, $perf_data>""?"\n|":"", $perf_data);
     exit($returncode);
