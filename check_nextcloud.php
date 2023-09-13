@@ -75,7 +75,7 @@ You need to specify the following parameters:
   -U:  uri of the nextcloud serverinfo api, you'll find it at https://cloud.example.com/settings/admin/serverinfo
   -T token: authenticate using serverinfo token (either -T or -u and -p)
   -P:  Performance Data Parameter:
-	freespace  - space available on disk
+    freespace  - space available on disk
     memory     - memory usage (free memory triggers alarm, total memory for information purposes)
     database   - size on disk
     swap       - free space in swap
@@ -221,6 +221,13 @@ if ($statuscode == 200) {
         $perf_data .= sprintf(" cpuload15min=%f;;;; ",$pd['load15']);
         $returncode = performance_status($pd['load1'],$ncwarn,$nccrit);
     }
+
+    if($ncpd == "files") {
+        $status_message .= sprintf("files - %d", $pd['files']);
+        $perf_data .= sprintf("files=%d;%s;%s;; ",$pd['files'],$ncwarn,$nccrit);
+        $returncode = performance_status($pd['files'],$ncwarn,$nccrit);
+    }
+	
     if($ncpd == "users") {
         $status_message .= sprintf("user count: %d 5min: %d 1h: %d 24h %d ",
                                     $pd['users'],$pd['users_active_5min'],$pd['users_active_1h'],$pd['users_active_24h']);
