@@ -50,7 +50,20 @@ object CheckCommand "nextcloud" {
       "description" = "API-user's password - obsolete when -T provided"
       "value" = "$nc_api_password$"
     }
-
+    "-P" = {
+            description = "Performance Data Parameter"
+            value = "$nextcloud_performance_data$"
+        }
+    "-c" = {
+      "required" = false
+      "description" = "Critical - when -P performance data out of this rage"
+      "value" = "$nc_api_range_criticals$"
+    }
+    "-w" = {
+      "required" = false
+      "description" = "Warning - when -P performance data out of this rage"
+      "value" = "$nc_api_range_warnings$"
+    }
   }
 
   vars.nc_api_url = "/ocs/v2.php/apps/serverinfo/api/v1/info"
