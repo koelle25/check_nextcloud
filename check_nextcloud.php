@@ -11,7 +11,6 @@
  *
  *
  * For more information visit https://github.com/koelle25/check_nextcloud
- * For more information visit https://github.com/beccon4/check_nextcloud
  *
  ***/
 
