@@ -9,8 +9,13 @@ This is a monitoring plugin for [icinga](https://www.icinga.com) to check the st
 Try the plugin at the command line like this:
 ```
 /usr/bin/php ./check_nextcloud.php -H cloud.example.com -T access-token
-
 ```
+For backward compatibility the old user/password method is also possible. Just remember that the user used has to be in the admin group, so use appropriate measures (a strong password, HTTPS only, etc.):
+```
+/usr/bin/php ./check_nextcloud.php -H cloud.example.com -u apiuser -p apipassword
+```
+
+
 
 You can define the icinga2 check command as follows:
 ```
@@ -57,4 +62,6 @@ object CheckCommand "nextcloud" {
 * 2023-04-07: add token athentification (beccon4)
 ## Authors
 * [Kevin Köllmann](https://github.com/koelle25)
+
+## Contributers
 * [Conrad Beckert](https://github.com/beccon4)
