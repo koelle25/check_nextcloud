@@ -6,7 +6,6 @@
  * Monitoring plugin to check the status of nextcloud serverinfo app
  *
  * Copyright (c) 2019 Kevin Köllmann <mail@kevinkoellmann.de>
- * contribution and further development: Conrad Beckert <kontakt@miradata.de>
  *
  * Usage: /usr/bin/php ./check_nextcloud.php -H cloud.example.com -u /ocs/v2.php/apps/serverinfo/api/v1/info
  *
@@ -71,10 +70,10 @@ function performance_status($parameter_value,$ncwarn,$nccrit) {
 function show_helptext() {
   print "check_nextcloud.php - Monitoring plugin to check the status of nextcloud serverinfo app.\n
 You need to specify the following parameters:
-  -H hostname: domain address of the nextcloud instance, e.g. cloud.example.com
-  -U:  uri of the nextcloud serverinfo api, you'll find it at https://cloud.example.com/settings/admin/serverinfo
-  -T token: authenticate using serverinfo token (either -T or -u and -p)
-  -P:  Performance Data Parameter:
+  -H  hostname: domain address of the nextcloud instance, e.g. cloud.example.com
+  -U  uri: of the nextcloud serverinfo api, you'll find it at https://cloud.example.com/settings/admin/serverinfo
+  -T  token: authenticate using serverinfo token (either -T or -u and -p)
+  -P  Performance Data Parameter:
     freespace  - space available on disk
     memory     - memory usage (free memory triggers alarm, total memory for information purposes)
     database   - size on disk
@@ -85,10 +84,10 @@ You need to specify the following parameters:
     shares     - number of shares published
     patchlevel - pending updates for Nextcloud and modules (yes or no)
 
-  -c range: Critical Value (returns 2 CRITICAL if -P out of range)
-  -w range:  Warning Value  (returns 1 WARNING if -P out of range)
-  -u:  username to authenticate against the API endpoint
-  -p:  password to authenticate against the API endpoint
+  -c  <range>: Critical Value (returns 2 CRITICAL if -P out of range)
+  -w  <range>:  Warning Value  (returns 1 WARNING if -P out of range)
+  -u  username: to authenticate against the API endpoint
+  -p  password: to authenticate against the API endpoint
   -s:  (optional) should the check be done over HTTPS? (default: true)\n
   
   Range:	Alerts when:
@@ -118,7 +117,7 @@ if( !isset($options['H']) ) {
 $nchost = trim($options['H']);
 $ncuri  = isset($options['U']) ? trim($options['U']) : "/ocs/v2.php/apps/serverinfo/api/v1/info";
 $ncssl  = (isset($options['s']) && is_bool($options['s'])) ? $options['s'] : true;
-$ncsit  = isset($options['T'])? trim($options['T']) : "";
+$nctoken  = isset($options['T'])? trim($options['T']) : "";
 $ncpd   = isset($options['P'])?trim($options['P']): 0  ;
 $nccrit = isset($options['c'])?trim($options['c']) : "";
 $ncwarn = isset($options['w'])?trim($options['w']) : "";  
@@ -126,11 +125,11 @@ $ncuser = isset($options['u']) ? trim($options['u']) : "";
 $ncpass = isset($options['p']) ? trim($options['p']) : "";
 
 $context=null;
-if($ncsit) {
+if($nctoken) {
   $opts = array (
-    'http' => array (
-    'method' => 'GET',
-    'header' => "NC-Token:$ncsit",
+      'http' => array (
+      'method' => 'GET',
+      'header' => "NC-Token:$nctoken",
     )
   );
   $context = stream_context_create($opts);
