@@ -14,7 +14,7 @@
  *
  ***/
 
-// 1k => 1024  
+// 1k => 1024
 function scan_bytesize($bytesize_str) {
     $exponent = array('B'=>0 ,'kB'=>1,'MB'=> 2 ,'GB'=>3,'TB'=>4,'PB'=>5,'EB'=>6,'ZB'=>7,'YB'=>8,"KB"=>1);
     while(preg_match("/([0-9\.]+)([kKMGT]*B)/",$bytesize_str,$matches)) {
@@ -31,35 +31,44 @@ function format_bytesize($bytes, $decimals = 2) {
   return sprintf("%.{$decimals}f %s", $bytes / pow(1024, $factor), @$size[$factor]);
 }
 
-function out_of_range($pattern,$value) {
+function out_of_range($pattern,$value,$value_max) {
+    // --- alarm when in range @123:456 ---
     if(preg_match('/@([-0-9\.]+)\:([-0-9\.]+)/',scan_bytesize($pattern),$matches)) {
         return ( $value >= $matches[1] and $value <= $matches[2] )? 1 : 0;
     }
+    // --- alarm when out of range 123:456 ---
     elseif(preg_match('/([-0-9\.]+)\:([-0-9\.]+)/',scan_bytesize($pattern),$matches)) {
         return ( $value < $matches[1] or $value > $matches[2] )? 1 : 0;
     }
+    // --- alarm when above threashold :123 ---
     elseif(preg_match('/\~\:([-0-9\.]+)/',scan_bytesize($pattern),$matches)) {
         return ( $value > $matches[1])? 1 : 0;
     }
+    // --- alarm when below threashold 123: ---
     elseif(preg_match('/([-0-9\.]+)\:$/',scan_bytesize($pattern),$matches)) {
         return ( $value < $matches[1] ) ? 1 : 0;
     }
-    elseif(preg_match('/([-0-9\.]+)/',scan_bytesize($pattern),$matches)) {
-        return ($value < 0 or $value > $matches[1])?1:0;
+    // --- alarm when percentage drops below threashold ---
+    elseif(preg_match('/([-0-9\.]+)%/',$pattern,$matches)) {
+        if( $value_max == 0 ) {
+            print "Percentage parameter not available\n";
+            exit(1);
+        }
+        return ($matches[1] > (100 * ($value / $value_max)))? 1 : 0;
     }
     else {
         return 0;
     }
-}       
+}
 
-function performance_status($parameter_value,$ncwarn,$nccrit) {
+function performance_status($parameter_value,$ncwarn,$nccrit,$parameter_max_value) {
     if( isset($nccrit) && $nccrit > "" ) {
-        if( out_of_range($nccrit,$parameter_value) ) {
+        if( out_of_range($nccrit,$parameter_value,$parameter_max_value) ) {
             return(2);
         }
     }
     if( isset($ncwarn) && $ncwarn > "" ) {
-        if( out_of_range($ncwarn,$parameter_value) ) {
+        if( out_of_range($ncwarn,$parameter_value,$parameter_max_value) ) {
             return(1);
         }
     }
@@ -88,21 +97,29 @@ You need to specify the following parameters:
   -u  username: to authenticate against the API endpoint
   -p  password: to authenticate against the API endpoint
   -s:  (optional) should the check be done over HTTPS? (default: true)\n
-  
+  -A:  (optional) air gapped server (no patch level checks to Nextcloud - default: false)
+
   Range:	Alerts when:
-    x           value > x or value < 0
     x:          value < x
-    ~:x         value > x
+    :x          value > x
     x:y         outside [x,y]
     @x:y        inside  (x,y)
-  where x is a number (may include . and -)
+    x%          value less than x percent (memory and swap only)
+  where x is a number (which may include . and -)
+
+  Examples:
+   -P memory -w 5G:  - warn when free memory drops below 5G
+   -P memory -c 1G:  - less than 1GB memory is critical
+   -P users  -w :100 - warn if more than 100 users are concurrently logged in
+   -P load   -c 50:  - cpu above 50 is critical
+   -P patchlevel     - warn if new version or app updates available
   \n\n";
 }
 
 
 
 // get commands passed as arguments
-$options = getopt("H:U:u:p:T:s::c:w:P:");
+$options = getopt("H:U:u:p:T:s::c:w:P:A::");
 if (!is_array($options) ) {
   print "There was a problem reading the passed option.\n\n";
   exit(1);
@@ -119,9 +136,10 @@ $ncssl  = (isset($options['s']) && is_bool($options['s'])) ? $options['s'] : tru
 $nctoken  = isset($options['T'])? trim($options['T']) : "";
 $ncpd   = isset($options['P'])?trim($options['P']): 0  ;
 $nccrit = isset($options['c'])?trim($options['c']) : "";
-$ncwarn = isset($options['w'])?trim($options['w']) : "";  
+$ncwarn = isset($options['w'])?trim($options['w']) : "";
 $ncuser = isset($options['u']) ? trim($options['u']) : "";
 $ncpass = isset($options['p']) ? trim($options['p']) : "";
+$ncairg  = isset($options['A']);
 
 $context=null;
 if($nctoken) {
@@ -135,7 +153,14 @@ if($nctoken) {
 }
 $ncurl = ($ncssl ? "https://" : "http://") . (isset($options['T']) ? "" : $ncuser . ":" . $ncpass . "@") . $nchost . $ncuri;
 
-$url = "${ncurl}?format=json&skipApps=false&skipUpdate=false";
+$url = "${ncurl}?format=json";
+if ( $ncairg ) {
+    $url = "${url}&skipApps=true&skipUpdate=true";
+}
+else {
+    $url = "${url}&skipApps=false&skipUpdate=false";
+}
+
 $res_str = file_get_contents($url, false, $context);
 if(empty($res_str)) {
   print "Cannot access Nextcloud server info\n\n";
@@ -156,7 +181,7 @@ $pd['mem_free'] = $result['ocs']['data']['nextcloud']['system']['mem_free'] * 10
 $pd['mem_total'] = $result['ocs']['data']['nextcloud']['system']['mem_total'] * 1024;
 $pd['swap_free'] = $result['ocs']['data']['nextcloud']['system']['swap_free'] * 1024;
 $pd['swap_total'] = $result['ocs']['data']['nextcloud']['system']['swap_total'] * 1024;
-if(array_('apps',$result['ocs']['data']['nextcloud']['system'])) {
+if(array_key_exists('apps',$result['ocs']['data']['nextcloud']['system'])) {
     $pd['app_updates_available'] = $result['ocs']['data']['nextcloud']['system']['apps']['num_updates_available'];
     $pd['app_updates'] = array_keys($result['ocs']['data']['nextcloud']['system']['apps']['app_updates']);
 }
@@ -187,24 +212,24 @@ $returncode=0;
 if ($statuscode == 200) {
     $perf_data="";
     $status_message = ""; # sprintf("Nextcloud Version: %s ",$nc_version);
-    // check Performance Data Parameter 
+    // check Performance Data Parameter
     // returns: 'label'=value[UOM];[warn];[crit];[min];[max]
     if($ncpd == "freespace") {
         $status_message .= sprintf("%s disk space available ", format_bytesize($pd['freespace']));
         $perf_data .= sprintf(" free_space=%sB;%sB;%sB;; ",$pd['freespace'],$ncwarn,$nccrit);
-        $returncode = performance_status($pd['freespace'],$ncwarn,$nccrit);
+        $returncode = performance_status($pd['freespace'],$ncwarn,$nccrit,0);
     }
     if($ncpd == "memory") {
         $status_message .= sprintf("%s memory available of %s ", format_bytesize($pd['mem_free']), format_bytesize($pd['mem_total']));
         $perf_data .= sprintf(" memory_free=%sB;%sB;%sB;; ",$pd['mem_free'],$ncwarn,$nccrit);
         $perf_data .= sprintf(" memory_total=%sB;;;; ",$pd['mem_total']);
-        $returncode = performance_status($pd['mem_free'],$ncwarn,$nccrit);
+        $returncode = performance_status($pd['mem_free'],$ncwarn,$nccrit,$pd['mem_total']);
     }
     if($ncpd == "swap") {
         $status_message .= sprintf("%s swap available of %s ", format_bytesize($pd['swap_free']), format_bytesize($pd['swap_total']));
         $perf_data .= sprintf(" swap_free=%sB;%sB;%sB;; ",$pd['swap_free'],$ncwarn,$nccrit);
         $perf_data .= sprintf(" swap_total=%sB;;;; ",$pd['swap_total']);
-        $returncode = performance_status($pd['swap_free'],$ncwarn,$nccrit);
+        $returncode = performance_status($pd['swap_free'],$ncwarn,$nccrit,$pd['swap_total']);
     }
     if($ncpd == "database") {
         $status_message .= sprintf("database %s size %s ", $pd['db'], format_bytesize($pd['db_size']));
@@ -215,20 +240,20 @@ if ($statuscode == 200) {
         $status_message .= sprintf("Nextcloud version: %s webserver %s, PHP %s, database %s size %s ",
                                    $nc_version, $pd['webserver'],$pd['php_version'],$pd['db'], format_bytesize($pd['db_size']));
         $status_message .= sprintf("%d app updates available (%s) ", $pd['app_updates_available'], implode(", ", $pd['app_updates']));
-        $returncode = $pd['app_updates_available'] > 0 ? 1 : 0; 
+        $returncode = $pd['app_updates_available'] > 0 ? 1 : 0;
     }
     if($ncpd == "load") {
         $status_message .= sprintf("cpu load 1min %f 5min %f 15min %f ", $pd['load1'],$pd['load5'],$pd['load15']);
         $perf_data .= sprintf(" cpuload1min=%f;%sB;%sB;; ",$pd['load1'],$ncwarn,$nccrit);
         $perf_data .= sprintf(" cpuload5min=%f;;;; ",$pd['load5']);
         $perf_data .= sprintf(" cpuload15min=%f;;;; ",$pd['load15']);
-        $returncode = performance_status($pd['load1'],$ncwarn,$nccrit);
+        $returncode = performance_status($pd['load1'],$ncwarn,$nccrit,100);
     }
 
     if($ncpd == "files") {
         $status_message .= sprintf("files - %d", $pd['files']);
         $perf_data .= sprintf("files=%d;%s;%s;; ",$pd['files'],$ncwarn,$nccrit);
-        $returncode = performance_status($pd['files'],$ncwarn,$nccrit);
+        $returncode = performance_status($pd['files'],$ncwarn,$nccrit,0);
     }
 	
     if($ncpd == "users") {
@@ -238,7 +263,7 @@ if ($statuscode == 200) {
         $perf_data .= sprintf(" users5min=%d;;;; ",$pd['users_active_5min']);
         $perf_data .= sprintf(" users1h=%d;;;; ",$pd['users_active_1h']);
         $perf_data .= sprintf(" users24h=%d;;;; ",$pd['users_active_24h']);
-        $returncode = performance_status($pd['users'],$ncwarn,$nccrit);
+        $returncode = performance_status($pd['users'],$ncwarn,$nccrit,0);
     }
     if($ncpd == "shares") {
         $status_message .= sprintf("shares: %d user: %d group: %d linked: %d without password: %d federated send: %d received: %d ",
@@ -252,15 +277,15 @@ if ($statuscode == 200) {
         $perf_data .= sprintf(" shares_link_no_password=%d;;;; ",$pd['shares_link_no_password']);
         $perf_data .= sprintf(" shares_federated_sent=%d;;;; ",$pd['shares_fed_sent']);
         $perf_data .= sprintf(" shares_federated_received=%d;;;; ",$pd['shares_fed_received']);
-        $returncode = performance_status($pd['shares'],$ncwarn,$nccrit);
+        $returncode = performance_status($pd['shares'],$ncwarn,$nccrit,0);
     }
     printf("%s : %s%s%s", ($returncode==0?'OK':($returncode==1?'WARNING':'CRITICAL')), $status_message, $perf_data>""?"\n|":"", $perf_data);
     exit($returncode);
-} 
+}
 else if ($statuscode >= 400 && $statuscode < 600) {
     printf("CRITICAL: %s\n",$status);
     exit(2);
-} 
+}
 else {
   printf("WARNING: %s\n", $status);
   exit(1);
