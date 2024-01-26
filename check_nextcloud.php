@@ -135,8 +135,7 @@ if($nctoken) {
 }
 $ncurl = ($ncssl ? "https://" : "http://") . (isset($options['T']) ? "" : $ncuser . ":" . $ncpass . "@") . $nchost . $ncuri;
 
-// get UUID from scan.nextcloud.com service
-$url = "${ncurl}?format=json";
+$url = "${ncurl}?format=json&skipApps=false&skipUpdate=false";
 $res_str = file_get_contents($url, false, $context);
 if(empty($res_str)) {
   print "Cannot access Nextcloud server info\n\n";
@@ -157,8 +156,14 @@ $pd['mem_free'] = $result['ocs']['data']['nextcloud']['system']['mem_free'] * 10
 $pd['mem_total'] = $result['ocs']['data']['nextcloud']['system']['mem_total'] * 1024;
 $pd['swap_free'] = $result['ocs']['data']['nextcloud']['system']['swap_free'] * 1024;
 $pd['swap_total'] = $result['ocs']['data']['nextcloud']['system']['swap_total'] * 1024;
-$pd['app_updates_available'] = $result['ocs']['data']['nextcloud']['system']['apps']['num_updates_available'];
-$pd['app_updates'] = array_keys($result['ocs']['data']['nextcloud']['system']['apps']['app_updates']);
+if(array_('apps',$result['ocs']['data']['nextcloud']['system'])) {
+    $pd['app_updates_available'] = $result['ocs']['data']['nextcloud']['system']['apps']['num_updates_available'];
+    $pd['app_updates'] = array_keys($result['ocs']['data']['nextcloud']['system']['apps']['app_updates']);
+}
+else {
+    $pd['app_updates_available'] = "";
+    $pd['app_updates'] = array();
+}
 $pd['users'] = $result['ocs']['data']['nextcloud']['storage']['num_users'];
 $pd['users_active_5min'] = $result['ocs']['data']['activeUsers']['last5minutes'];
 $pd['users_active_1h'] = $result['ocs']['data']['activeUsers']['last1hour'];
