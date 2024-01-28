@@ -234,7 +234,7 @@ if ($statuscode == 200) {
     if($ncpd == "database") {
         $status_message .= sprintf("database %s size %s ", $pd['db'], format_bytesize($pd['db_size']));
         $perf_data .= sprintf(" database=%sB;%sB;%sB;; ",$pd['db_size'],$ncwarn,$nccrit);
-        $returncode = performance_status($pd['db_size'],$ncwarn,$nccrit);
+        $returncode = performance_status($pd['db_size'],$ncwarn,$nccrit,0);
     }
     if($ncpd == "patchlevel") {
         $status_message .= sprintf("Nextcloud version: %s webserver %s, PHP %s, database %s size %s ",
