@@ -16,9 +16,14 @@ For backward compatibility the old user/password method is also possible. Just r
 ```
 
 You need to specify the following parameters:
-  -H  hostname: domain address of the nextcloud instance, e.g. cloud.example.com
+
+```
+  -H  hostname: domain address of the nextcloud instance, e.g. cloud.example.com  
+
   -U  uri: of the nextcloud serverinfo api, you'll find it at https://cloud.example.com/settings/admin/serverinfo
+
   -T  token: authenticate using serverinfo token (either -T or -u and -p)
+
   -P  Performance Data Parameter:
     freespace  - space available on disk
     memory     - memory usage (free memory triggers alarm, total memory for information purposes)
@@ -31,27 +36,33 @@ You need to specify the following parameters:
     patchlevel - pending updates for Nextcloud and modules (yes or no)
 
   -c  <range>: Critical Value (returns 2 CRITICAL if -P out of range)
+
   -w  <range>:  Warning Value  (returns 1 WARNING if -P out of range)
+
   -u  username: to authenticate against the API endpoint
+  
   -p  password: to authenticate against the API endpoint
+  
   -s:  (optional) should the check be done over HTTPS? (default: true)\n
+  
   -A:  (optional) air gapped server (no patch level checks to Nextcloud - default: false)
   
   Range:	Alerts when:
-    x:          value < x
+    x:          value < x 
     :x          value > x
     x:y         outside [x,y]
     @x:y        inside  (x,y)
     x%          value less than x percent (memory and swap only)
   where x is a number (which may include . and -)
+```
 
-  Examples:  
+Examples:
+```
    -P memory -w 5G:  - warn when free memory drops below 5G
    -P memory -c 1G:  - less than 1GB memory is critical
    -P users  -w :100 - warn if more than 100 users are concurrently logged in
    -P patchlevel     - warn if new version or app updates available
-
-
+```
 
 You can define the icinga2 check command as follows:
 ```
